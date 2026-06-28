@@ -1,0 +1,224 @@
+openapi: 3.0.3
+info:
+  title: Регистрация пользователя
+  description: REST API для регистрации пользователя в системе
+  version: 1.0.0
+
+servers:
+  - url: https://api.example.com/v1
+
+paths:
+  /auth/register:
+    post:
+      summary: Регистрация нового пользователя
+      operationId: registerUser
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              success:
+                summary: Успешная регистрация
+                value:
+                  email: user@example.com
+                  password: SecurePass123!
+                  confirmPassword: SecurePass123!
+                  firstName: Иван
+                  lastName: Иванов
+                  phone: "+79001234567"
+                  agreeTerms: true
+      responses:
+        '201':
+          description: Пользователь успешно зарегистрирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterSuccessResponse'
+              example:
+                success: true
+                data:
+                  id: "usr_a1b2c3d4e5f6"
+                  email: user@example.com
+                  firstName: Иван
+                  lastName: Иванов
+                  phone: "+79001234567"
+                  createdAt: "2026-06-28T12:00:00Z"
+        '400':
+          description: Ошибка валидации входных данных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: VALIDATION_ERROR
+                  message: "Ошибки валидации"
+                  details:
+                    - field: email
+                      message: "Некорректный формат email"
+                    - field: password
+                      message: "Пароль должен содержать минимум 8 символов"
+        '409':
+          description: Пользователь с таким email уже существует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: USER_ALREADY_EXISTS
+                  message: "Пользователь с таким email уже зарегистрирован"
+        '422':
+          description: Невалидный формат данных (например, неверный формат телефона)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: UNPROCESSABLE_ENTITY
+                  message: "Невалидный формат данных"
+                  details:
+                    - field: phone
+                      message: "Телефон должен быть в формате +7XXXXXXXXXX"
+        '429':
+          description: Слишком много запросов (rate limit)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: RATE_LIMIT_EXCEEDED
+                  message: "Превышен лимит запросов. Попробуйте позже"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: INTERNAL_SERVER_ERROR
+                  message: "Внутренняя ошибка сервера"
+
+components:
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - confirmPassword
+        - firstName
+        - lastName
+        - agreeTerms
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email пользователя
+          example: user@example.com
+          maxLength: 254
+        password:
+          type: string
+          format: password
+          description: Пароль (минимум 8 символов, хотя бы 1 заглавная буква, 1 цифра, 1 спецсимвол)
+          example: SecurePass123!
+          minLength: 8
+          maxLength: 128
+        confirmPassword:
+          type: string
+          format: password
+          description: Подтверждение пароля (должно совпадать с password)
+          example: SecurePass123!
+        firstName:
+          type: string
+          description: Имя пользователя
+          example: Иван
+          minLength: 1
+          maxLength: 100
+        lastName:
+          type: string
+          description: Фамилия пользователя
+          example: Иванов
+          minLength: 1
+          maxLength: 100
+        phone:
+          type: string
+          description: Телефон в формате +7XXXXXXXXXX (необязательное)
+          example: "+79001234567"
+          pattern: '^\\+7\\d{10}$'
+        agreeTerms:
+          type: boolean
+          description: Согласие с пользовательским соглашением
+          example: true
+
+    RegisterSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Уникальный ID пользователя
+              example: "usr_a1b2c3d4e5f6"
+            email:
+              type: string
+              format: email
+              example: user@example.com
+            firstName:
+              type: string
+              example: Иван
+            lastName:
+              type: string
+              example: Иванов
+            phone:
+              type: string
+              example: "+79001234567"
+            createdAt:
+              type: string
+              format: date-time
+              example: "2026-06-28T12:00:00Z"
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Код ошибки
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              description: Человеко-читаемое описание ошибки
+              example: "Ошибки валидации"
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    description: Имя поля с ошибкой
+                  message:
+                    type: string
+                    description: Описание ошибки для конкретного поля
