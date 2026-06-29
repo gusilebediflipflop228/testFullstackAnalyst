@@ -12,29 +12,23 @@
     <participant id="Participant_Supply" name="Отдел снабжения" processRef="Process_Supply"/>
     <participant id="Participant_Logistics" name="Логистика" processRef="Process_Logistics"/>
     <participant id="Participant_Supplier" name="Поставщик" processRef="Process_Supplier"/>
-    <participant id="Participant_System1" name="Система №1" processRef="Process_System1"/>
-    <participant id="Participant_System2" name="Система №2" processRef="Process_System2"/>
-    <participant id="Participant_System3" name="Система №3" processRef="Process_System3"/>
 
-    <messageFlow id="MF_UserToTS" sourceRef="Event_UserRequest" targetRef="Event_TSReceiveRequest" name="Заявка на оборудование"/>
-    <messageFlow id="MF_TS_GetNumber" sourceRef="Task_CreateTicket" targetRef="Event_UserRequest" name="Номер обращения"/>
+    <messageFlow id="MF_UserToTS" sourceRef="Task_UserMakeRequest" targetRef="Event_TSReceiveRequest" name="Заявка на оборудование"/>
+    <messageFlow id="MF_TS_GetNumber" sourceRef="Task_CreateTicket" targetRef="Task_UserGetNumber" name="Номер обращения"/>
     <messageFlow id="MF_TS_ToSupply" sourceRef="Task_CreateRequestSupply" targetRef="Event_SupplyReceiveRequest" name="Заявка в Системе №2"/>
-    <messageFlow id="MF_Supply_Check" sourceRef="Event_SupplyReceiveRequest" targetRef="Task_CheckAvailability" name="Уведомление о заявке"/>
     <messageFlow id="MF_Supply_Logistics" sourceRef="Task_CallLogistics" targetRef="Event_LogisticsReceive" name="Вызов логистики"/>
     <messageFlow id="MF_Supply_Order" sourceRef="Task_MakePurchaseRequest" targetRef="Event_SupplierReceiveOrder" name="Заявка на закупку"/>
     <messageFlow id="MF_Supplier_Deliver" sourceRef="Task_DeliverEquipment" targetRef="Event_SupplyReceiveEquipment" name="Поставка оборудования"/>
-    <messageFlow id="MF_Logistics_ToTS" sourceRef="Task_SendToTechSupport" targetRef="Event_TechSupportReceiveEquipment" name="Оборудование ТП"/>
+    <messageFlow id="MF_Logistics_ToTS" sourceRef="Task_SendToTechSupport_log" targetRef="Event_TechSupportReceiveEquipment" name="Оборудование ТП"/>
     <messageFlow id="MF_TS_GiveUser" sourceRef="Task_GiveEquipment" targetRef="Event_UserReceiveEquipment" name="Выдача оборудования"/>
-    <messageFlow id="MF_TS_CloseS1" sourceRef="Task_CloseRequestS1" targetRef="Event_System1Close" name="Закрытие заявки"/>
-    <messageFlow id="MF_TS_CloseS2" sourceRef="Task_CloseRequestS2" targetRef="Event_System2Close" name="Закрытие заявки"/>
   </collaboration>
 
   <!-- Пользователь офиса -->
   <process id="Process_User" isExecutable="false">
-    <startEvent id="Event_UserRequest" name="Нужно оборудование">
+    <startEvent id="Event_UserNeed" name="Нужно оборудование">
       <outgoing>Flow_User_1</outgoing>
     </startEvent>
-    <task id="Task_UserMakeRequest" name="Отправить заявку&#10;(почта/телефон)">
+    <task id="Task_UserMakeRequest" name="Отправить заявку (почта/телефон)">
       <incoming>Flow_User_1</incoming>
       <outgoing>Flow_User_2</outgoing>
     </task>
@@ -42,33 +36,23 @@
       <incoming>Flow_User_2</incoming>
       <outgoing>Flow_User_3</outgoing>
     </task>
-    <task id="Task_UserTrack" name="Отслеживать статус заявки">
+    <receiveEvent id="Event_UserReceiveEquipment" name="Получить оборудование">
       <incoming>Flow_User_3</incoming>
       <outgoing>Flow_User_4</outgoing>
-    </task>
-    <eventBasedGateway id="GW_UserWait" name="Ожидание">
-      <incoming>Flow_User_4</incoming>
-      <outgoing>Flow_User_5</outgoing>
-      <outgoing>Flow_User_6</outgoing>
-    </eventBasedGateway>
-    <receiveEvent id="Event_UserReceiveEquipment" name="Получить оборудование">
-      <incoming>Flow_User_5</incoming>
-      <outgoing>Flow_User_7</outgoing>
     </receiveEvent>
     <task id="Task_UserRate" name="Оценить сервис ТП">
-      <incoming>Flow_User_7</incoming>
+      <incoming>Flow_User_4</incoming>
+      <outgoing>Flow_User_5</outgoing>
     </task>
     <endEvent id="Event_UserEnd" name="Завершено">
-      <incoming>Flow_User_6</incoming>
+      <incoming>Flow_User_5</incoming>
     </endEvent>
 
-    <sequenceFlow id="Flow_User_1" sourceRef="Event_UserRequest" targetRef="Task_UserMakeRequest"/>
+    <sequenceFlow id="Flow_User_1" sourceRef="Event_UserNeed" targetRef="Task_UserMakeRequest"/>
     <sequenceFlow id="Flow_User_2" sourceRef="Task_UserMakeRequest" targetRef="Task_UserGetNumber"/>
-    <sequenceFlow id="Flow_User_3" sourceRef="Task_UserGetNumber" targetRef="Task_UserTrack"/>
-    <sequenceFlow id="Flow_User_4" sourceRef="Task_UserTrack" targetRef="GW_UserWait"/>
-    <sequenceFlow id="Flow_User_5" sourceRef="GW_UserWait" targetRef="Event_UserReceiveEquipment"/>
-    <sequenceFlow id="Flow_User_6" sourceRef="GW_UserWait" targetRef="Event_UserEnd"/>
-    <sequenceFlow id="Flow_User_7" sourceRef="Event_UserReceiveEquipment" targetRef="Task_UserRate"/>
+    <sequenceFlow id="Flow_User_3" sourceRef="Task_UserGetNumber" targetRef="Event_UserReceiveEquipment"/>
+    <sequenceFlow id="Flow_User_4" sourceRef="Event_UserReceiveEquipment" targetRef="Task_UserRate"/>
+    <sequenceFlow id="Flow_User_5" sourceRef="Task_UserRate" targetRef="Event_UserEnd"/>
   </process>
 
   <!-- 1-я линия техподдержки -->
@@ -76,11 +60,11 @@
     <startEvent id="Event_TSReceiveRequest" name="Получить заявку от пользователя">
       <outgoing>Flow_TS_1</outgoing>
     </startEvent>
-    <task id="Task_CreateTicket" name="Создать обращение в Системе №1&#10;(присвоить номер)">
+    <task id="Task_CreateTicket" name="Создать обращение в Системе №1 (присвоить номер)">
       <incoming>Flow_TS_1</incoming>
       <outgoing>Flow_TS_2</outgoing>
     </task>
-    <task id="Task_CreateRequestSupply" name="Создать заявку на оборудование&#10;в Системе №2 (отделу снабжения)">
+    <task id="Task_CreateRequestSupply" name="Создать заявку на оборудование в Системе №2 (отделу снабжения)">
       <incoming>Flow_TS_2</incoming>
       <outgoing>Flow_TS_3</outgoing>
     </task>
@@ -97,7 +81,7 @@
       <outgoing>Flow_TS_6</outgoing>
       <outgoing>Flow_TS_7</outgoing>
     </parallelGateway>
-    <task id="Task_CloseRequestS1" name="Закрыть заявку пользователя&#10;в Системе №1">
+    <task id="Task_CloseRequestS1" name="Закрыть заявку пользователя в Системе №1">
       <incoming>Flow_TS_6</incoming>
       <outgoing>Flow_TS_8</outgoing>
     </task>
@@ -131,11 +115,11 @@
     <startEvent id="Event_SupplyReceiveRequest" name="Получить заявку (уведомление + кабинет Системы №2)">
       <outgoing>Flow_Sup_1</outgoing>
     </startEvent>
-    <task id="Task_CheckAvailability" name="Проверить наличие оборудования&#10;в Системе №3">
+    <task id="Task_CheckAvailability" name="Проверить наличие оборудования в Системе №3">
       <incoming>Flow_Sup_1</incoming>
       <outgoing>Flow_Sup_2</outgoing>
     </task>
-    <exclusiveGateway id="GW_Availability" name="Оборудование&#10;есть?">
+    <exclusiveGateway id="GW_Availability" name="Оборудование есть?">
       <incoming>Flow_Sup_2</incoming>
       <outgoing>Flow_Sup_Yes</outgoing>
       <outgoing>Flow_Sup_No</outgoing>
@@ -146,7 +130,7 @@
       <incoming>Flow_Sup_Yes</incoming>
       <outgoing>Flow_Sup_3</outgoing>
     </task>
-    <task id="Task_SendToTechSupport" name="Отправить оборудование&#10;первой линии ТП">
+    <task id="Task_SendToTechSupport" name="Отправить оборудование первой линии ТП">
       <incoming>Flow_Sup_3</incoming>
       <outgoing>Flow_Sup_EndYes</outgoing>
     </task>
@@ -155,7 +139,7 @@
     </endEvent>
 
     <!-- Ветка: оборудование нет -->
-    <task id="Task_MakePurchaseRequest" name="Сделать заявку на закупку&#10;поставщику (через почту)">
+    <task id="Task_MakePurchaseRequest" name="Сделать заявку на закупку поставщику (через почту)">
       <incoming>Flow_Sup_No</incoming>
       <outgoing>Flow_Sup_4</outgoing>
     </task>
@@ -163,7 +147,7 @@
       <incoming>Flow_Sup_4</incoming>
       <outgoing>Flow_Sup_5</outgoing>
     </task>
-    <receiveEvent id="Event_SupplyReceiveEquipment" name="Принять оборудование от поставщика&#10;(провести в Системе №3)">
+    <receiveEvent id="Event_SupplyReceiveEquipment" name="Принять оборудование от поставщика (провести в Системе №3)">
       <incoming>Flow_Sup_5</incoming>
       <outgoing>Flow_Sup_6</outgoing>
     </receiveEvent>
@@ -171,7 +155,7 @@
       <incoming>Flow_Sup_6</incoming>
       <outgoing>Flow_Sup_7</outgoing>
     </task>
-    <task id="Task_SendToTSPurchase" name="Передать оборудование&#10;техподдержке">
+    <task id="Task_SendToTSPurchase" name="Передать оборудование техподдержке">
       <incoming>Flow_Sup_7</incoming>
       <outgoing>Flow_Sup_EndNo</outgoing>
     </task>
@@ -194,10 +178,10 @@
 
   <!-- Логистика -->
   <process id="Process_Logistics" isExecutable="false">
-    <startEvent id="Event_LogisticsReceive" name="Получить вызов от снабжения">
+    <receiveEvent id="Event_LogisticsReceive" name="Получить вызов от снабжения">
       <outgoing>Flow_Log_1</outgoing>
-    </startEvent>
-    <task id="Task_SendToTechSupport" name="Доставить оборудование&#10;техподдержке">
+    </receiveEvent>
+    <task id="Task_SendToTechSupport_log" name="Доставить оборудование техподдержке">
       <incoming>Flow_Log_1</incoming>
       <outgoing>Flow_Log_2</outgoing>
     </task>
@@ -205,15 +189,15 @@
       <incoming>Flow_Log_2</incoming>
     </endEvent>
 
-    <sequenceFlow id="Flow_Log_1" sourceRef="Event_LogisticsReceive" targetRef="Task_SendToTechSupport"/>
-    <sequenceFlow id="Flow_Log_2" sourceRef="Task_SendToTechSupport" targetRef="Event_LogisticsEnd"/>
+    <sequenceFlow id="Flow_Log_1" sourceRef="Event_LogisticsReceive" targetRef="Task_SendToTechSupport_log"/>
+    <sequenceFlow id="Flow_Log_2" sourceRef="Task_SendToTechSupport_log" targetRef="Event_LogisticsEnd"/>
   </process>
 
   <!-- Поставщик -->
   <process id="Process_Supplier" isExecutable="false">
-    <startEvent id="Event_SupplierReceiveOrder" name="Получить заявку на закупку">
+    <receiveEvent id="Event_SupplierReceiveOrder" name="Получить заявку на закупку">
       <outgoing>Flow_Suppl_1</outgoing>
-    </startEvent>
+    </receiveEvent>
     <task id="Task_DeliverEquipment" name="Привезти оборудование">
       <incoming>Flow_Suppl_1</incoming>
       <outgoing>Flow_Suppl_2</outgoing>
@@ -226,101 +210,36 @@
     <sequenceFlow id="Flow_Suppl_2" sourceRef="Task_DeliverEquipment" targetRef="Event_SupplierEnd"/>
   </process>
 
-  <!-- Система №1 (пул участников) -->
-  <process id="Process_System1" isExecutable="false">
-    <startEvent id="Event_System1Start" name="">
-      <outgoing>Flow_S1_1</outgoing>
-    </startEvent>
-    <task id="Task_System1Create" name="Создать обращение">
-      <incoming>Flow_S1_1</incoming>
-      <outgoing>Flow_S1_2</outgoing>
-    </task>
-    <task id="Task_System1Track" name="Отслеживать статус">
-      <incoming>Flow_S1_2</incoming>
-      <outgoing>Flow_S1_3</outgoing>
-    </task>
-    <receiveEvent id="Event_System1Close" name="Заявка закрыта">
-      <incoming>Flow_S1_3</incoming>
-    </receiveEvent>
-
-    <sequenceFlow id="Flow_S1_1" sourceRef="Event_System1Start" targetRef="Task_System1Create"/>
-    <sequenceFlow id="Flow_S1_2" sourceRef="Task_System1Create" targetRef="Task_System1Track"/>
-    <sequenceFlow id="Flow_S1_3" sourceRef="Task_System1Track" targetRef="Event_System1Close"/>
-  </process>
-
-  <!-- Система №2 (пул участников) -->
-  <process id="Process_System2" isExecutable="false">
-    <startEvent id="Event_System2Start" name="">
-      <outgoing>Flow_S2_1</outgoing>
-    </startEvent>
-    <task id="Task_System2Receive" name="Принять заявку">
-      <incoming>Flow_S2_1</incoming>
-      <outgoing>Flow_S2_2</outgoing>
-    </task>
-    <task id="Task_System2Display" name="Отобразить в кабинете">
-      <incoming>Flow_S2_2</incoming>
-      <outgoing>Flow_S2_3</outgoing>
-    </task>
-    <receiveEvent id="Event_System2Close" name="Заявка закрыта">
-      <incoming>Flow_S2_3</incoming>
-    </receiveEvent>
-
-    <sequenceFlow id="Flow_S2_1" sourceRef="Event_System2Start" targetRef="Task_System2Receive"/>
-    <sequenceFlow id="Flow_S2_2" sourceRef="Task_System2Receive" targetRef="Task_System2Display"/>
-    <sequenceFlow id="Flow_S2_3" sourceRef="Task_System2Display" targetRef="Event_System2Close"/>
-  </process>
-
-  <!-- Система №3 (пул участников) -->
-  <process id="Process_System3" isExecutable="false">
-    <startEvent id="Event_System3Start" name="">
-      <outgoing>Flow_S3_1</outgoing>
-    </startEvent>
-    <task id="Task_System3Check" name="Проверить наличие">
-      <incoming>Flow_S3_1</incoming>
-      <outgoing>Flow_S3_2</outgoing>
-    </task>
-    <task id="Task_System3Receive" name="Принять оборудование">
-      <incoming>Flow_S3_2</incoming>
-      <outgoing>Flow_S3_3</outgoing>
-    </task>
-    <endEvent id="Event_System3End" name="">
-      <incoming>Flow_S3_3</incoming>
-    </endEvent>
-
-    <sequenceFlow id="Flow_S3_1" sourceRef="Event_System3Start" targetRef="Task_System3Check"/>
-    <sequenceFlow id="Flow_S3_2" sourceRef="Task_System3Check" targetRef="Task_System3Receive"/>
-    <sequenceFlow id="Flow_S3_3" sourceRef="Task_System3Receive" targetRef="Event_System3End"/>
-  </process>
-
   <!-- BPMN Diagram -->
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1">
+      <!-- Пул: Пользователь офиса -->
       <bpmndi:BPMNShape id="Participant_User_di" bpmnElement="Participant_User" isHorizontal="true">
-        <dc:Bounds x="160" y="340" width="1680" height="180"/>
+        <dc:Bounds x="160" y="340" width="1200" height="180"/>
       </bpmndi:BPMNShape>
+      
+      <!-- Пул: 1-я линия ТП -->
       <bpmndi:BPMNShape id="Participant_TechSupport_di" bpmnElement="Participant_TechSupport" isHorizontal="true">
-        <dc:Bounds x="160" y="120" width="1680" height="180"/>
+        <dc:Bounds x="160" y="120" width="1200" height="180"/>
       </bpmndi:BPMNShape>
+      
+      <!-- Пул: Отдел снабжения -->
       <bpmndi:BPMNShape id="Participant_Supply_di" bpmnElement="Participant_Supply" isHorizontal="true">
-        <dc:Bounds x="160" y="-120" width="1680" height="200"/>
+        <dc:Bounds x="160" y="-120" width="1200" height="200"/>
       </bpmndi:BPMNShape>
+      
+      <!-- Пул: Логистика -->
       <bpmndi:BPMNShape id="Participant_Logistics_di" bpmnElement="Participant_Logistics" isHorizontal="true">
-        <dc:Bounds x="160" y="-380" width="500" height="120"/>
+        <dc:Bounds x="160" y="-380" width="600" height="120"/>
       </bpmndi:BPMNShape>
+      
+      <!-- Пул: Поставщик -->
       <bpmndi:BPMNShape id="Participant_Supplier_di" bpmnElement="Participant_Supplier" isHorizontal="true">
-        <dc:Bounds x="160" y="-560" width="500" height="120"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Participant_System1_di" bpmnElement="Participant_System1" isHorizontal="true">
-        <dc:Bounds x="900" y="-560" width="400" height="120"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Participant_System2_di" bpmnElement="Participant_System2" isHorizontal="true">
-        <dc:Bounds x="900" y="-380" width="400" height="120"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Participant_System3_di" bpmnElement="Participant_System3" isHorizontal="true">
-        <dc:Bounds x="900" y="-120" width="400" height="120"/>
+        <dc:Bounds x="160" y="-560" width="600" height="120"/>
       </bpmndi:BPMNShape>
 
-      <bpmndi:BPMNShape id="Event_UserRequest_di" bpmnElement="Event_UserRequest">
+      <!-- Элементы: Пользователь -->
+      <bpmndi:BPMNShape id="Event_UserNeed_di" bpmnElement="Event_UserNeed">
         <dc:Bounds x="230" y="412" width="36" height="36"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_UserMakeRequest_di" bpmnElement="Task_UserMakeRequest">
@@ -329,53 +248,49 @@
       <bpmndi:BPMNShape id="Task_UserGetNumber_di" bpmnElement="Task_UserGetNumber">
         <dc:Bounds x="470" y="390" width="120" height="80"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_UserTrack_di" bpmnElement="Task_UserTrack">
-        <dc:Bounds x="630" y="390" width="120" height="80"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="GW_UserWait_di" bpmnElement="GW_UserWait">
-        <dc:Bounds x="795" y="405" width="50" height="50"/>
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_UserReceiveEquipment_di" bpmnElement="Event_UserReceiveEquipment">
-        <dc:Bounds x="902" y="412" width="36" height="36"/>
+        <dc:Bounds x="630" y="412" width="36" height="36"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_UserRate_di" bpmnElement="Task_UserRate">
-        <dc:Bounds x="980" y="390" width="120" height="80"/>
+        <dc:Bounds x="710" y="390" width="120" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_UserEnd_di" bpmnElement="Event_UserEnd">
-        <dc:Bounds x="813" y="472" width="36" height="36"/>
+        <dc:Bounds x="870" y="412" width="36" height="36"/>
       </bpmndi:BPMNShape>
 
+      <!-- Элементы: ТП -->
       <bpmndi:BPMNShape id="Event_TSReceiveRequest_di" bpmnElement="Event_TSReceiveRequest">
         <dc:Bounds x="230" y="192" width="36" height="36"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_CreateTicket_di" bpmnElement="Task_CreateTicket">
-        <dc:Bounds x="310" y="170" width="120" height="80"/>
+        <dc:Bounds x="310" y="170" width="140" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_CreateRequestSupply_di" bpmnElement="Task_CreateRequestSupply">
-        <dc:Bounds x="470" y="170" width="140" height="80"/>
+        <dc:Bounds x="490" y="170" width="150" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_TechSupportReceiveEquipment_di" bpmnElement="Event_TechSupportReceiveEquipment">
-        <dc:Bounds x="702" y="192" width="36" height="36"/>
+        <dc:Bounds x="690" y="192" width="36" height="36"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_GiveEquipment_di" bpmnElement="Task_GiveEquipment">
-        <dc:Bounds x="790" y="170" width="120" height="80"/>
+        <dc:Bounds x="770" y="170" width="120" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="GW_CloseParallel_di" bpmnElement="GW_CloseParallel">
-        <dc:Bounds x="955" y="185" width="50" height="50"/>
+        <dc:Bounds x="930" y="185" width="50" height="50"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_CloseRequestS1_di" bpmnElement="Task_CloseRequestS1">
-        <dc:Bounds x="1060" y="130" width="140" height="60"/>
+        <dc:Bounds x="1020" y="140" width="140" height="60"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_CloseRequestS2_di" bpmnElement="Task_CloseRequestS2">
-        <dc:Bounds x="1060" y="230" width="140" height="60"/>
+        <dc:Bounds x="1020" y="220" width="140" height="60"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="GW_CloseJoin_di" bpmnElement="GW_CloseJoin">
-        <dc:Bounds x="1255" y="185" width="50" height="50"/>
+        <dc:Bounds x="1200" y="185" width="50" height="50"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_TSEnd_di" bpmnElement="Event_TSEnd">
-        <dc:Bounds x="1352" y="192" width="36" height="36"/>
+        <dc:Bounds x="1290" y="192" width="36" height="36"/>
       </bpmndi:BPMNShape>
 
+      <!-- Элементы: Снабжение -->
       <bpmndi:BPMNShape id="Event_SupplyReceiveRequest_di" bpmnElement="Event_SupplyReceiveRequest">
         <dc:Bounds x="230" y="-48" width="36" height="36"/>
       </bpmndi:BPMNShape>
@@ -383,95 +298,242 @@
         <dc:Bounds x="310" y="-70" width="160" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="GW_Availability_di" bpmnElement="GW_Availability">
-        <dc:Bounds x="525" y="-55" width="50" height="50"/>
+        <dc:Bounds x="520" y="-55" width="50" height="50"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_CallLogistics_di" bpmnElement="Task_CallLogistics">
-        <dc:Bounds x="630" y="-110" width="120" height="50"/>
+        <dc:Bounds x="620" y="-100" width="120" height="50"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_SendToTechSupport_di" bpmnElement="Task_SendToTechSupport">
-        <dc:Bounds x="790" y="-110" width="140" height="50"/>
+        <dc:Bounds x="780" y="-100" width="140" height="50"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_SupplyEndYes_di" bpmnElement="Event_SupplyEndYes">
-        <dc:Bounds x="972" y="-98" width="36" height="36"/>
+        <dc:Bounds x="960" y="-90" width="36" height="36"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_MakePurchaseRequest_di" bpmnElement="Task_MakePurchaseRequest">
-        <dc:Bounds x="630" y="10" width="160" height="50"/>
+        <dc:Bounds x="620" y="10" width="160" height="50"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_WaitSupplier_di" bpmnElement="Task_WaitSupplier">
-        <dc:Bounds x="830" y="10" width="120" height="50"/>
+        <dc:Bounds x="820" y="10" width="120" height="50"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_SupplyReceiveEquipment_di" bpmnElement="Event_SupplyReceiveEquipment">
-        <dc:Bounds x="992" y="22" width="36" height="36"/>
+        <dc:Bounds x="980" y="22" width="36" height="36"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_CallLogisticsAfter_di" bpmnElement="Task_CallLogisticsAfter">
-        <dc:Bounds x="1070" y="10" width="120" height="50"/>
+        <dc:Bounds x="1050" y="10" width="120" height="50"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_SendToTSPurchase_di" bpmnElement="Task_SendToTSPurchase">
-        <dc:Bounds x="1230" y="10" width="140" height="50"/>
+        <dc:Bounds x="1210" y="10" width="140" height="50"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_SupplyEndNo_di" bpmnElement="Event_SupplyEndNo">
-        <dc:Bounds x="1412" y="22" width="36" height="36"/>
+        <dc:Bounds x="1390" y="22" width="36" height="36"/>
       </bpmndi:BPMNShape>
 
+      <!-- Элементы: Логистика -->
       <bpmndi:BPMNShape id="Event_LogisticsReceive_di" bpmnElement="Event_LogisticsReceive">
         <dc:Bounds x="230" y="-348" width="36" height="36"/>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_SendToTechSupport_log_di" bpmnElement="Task_SendToTechSupport" isHorizontal="true">
-        <dc:Bounds x="310" y="-370" width="120" height="80"/>
+      <bpmndi:BPMNShape id="Task_SendToTechSupport_log_di" bpmnElement="Task_SendToTechSupport_log">
+        <dc:Bounds x="310" y="-370" width="140" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_LogisticsEnd_di" bpmnElement="Event_LogisticsEnd">
-        <dc:Bounds x="472" y="-338" width="36" height="36"/>
+        <dc:Bounds x="490" y="-348" width="36" height="36"/>
       </bpmndi:BPMNShape>
 
+      <!-- Элементы: Поставщик -->
       <bpmndi:BPMNShape id="Event_SupplierReceiveOrder_di" bpmnElement="Event_SupplierReceiveOrder">
         <dc:Bounds x="230" y="-528" width="36" height="36"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_DeliverEquipment_di" bpmnElement="Task_DeliverEquipment">
-        <dc:Bounds x="310" y="-550" width="120" height="80"/>
+        <dc:Bounds x="310" y="-550" width="140" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_SupplierEnd_di" bpmnElement="Event_SupplierEnd">
-        <dc:Bounds x="472" y="-518" width="36" height="36"/>
+        <dc:Bounds x="490" y="-528" width="36" height="36"/>
       </bpmndi:BPMNShape>
 
-      <bpmndi:BPMNShape id="Event_System1Start_di" bpmnElement="Event_System1Start">
-        <dc:Bounds x="942" y="-528" width="36" height="36"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_System1Create_di" bpmnElement="Task_System1Create">
-        <dc:Bounds x="1010" y="-550" width="100" height="80"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_System1Track_di" bpmnElement="Task_System1Track">
-        <dc:Bounds x="1140" y="-550" width="100" height="80"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_System1Close_di" bpmnElement="Event_System1Close">
-        <dc:Bounds x="1262" y="-518" width="36" height="36"/>
-      </bpmndi:BPMNShape>
+      <!-- Sequence Flow: Пользователь -->
+      <bpmndi:BPMNEdge id="Flow_User_1_di" bpmnElement="Flow_User_1">
+        <di:waypoint x="266" y="430"/>
+        <di:waypoint x="310" y="430"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_User_2_di" bpmnElement="Flow_User_2">
+        <di:waypoint x="430" y="430"/>
+        <di:waypoint x="470" y="430"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_User_3_di" bpmnElement="Flow_User_3">
+        <di:waypoint x="590" y="430"/>
+        <di:waypoint x="630" y="430"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_User_4_di" bpmnElement="Flow_User_4">
+        <di:waypoint x="666" y="430"/>
+        <di:waypoint x="710" y="430"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_User_5_di" bpmnElement="Flow_User_5">
+        <di:waypoint x="830" y="430"/>
+        <di:waypoint x="870" y="430"/>
+      </bpmndi:BPMNEdge>
 
-      <bpmndi:BPMNShape id="Event_System2Start_di" bpmnElement="Event_System2Start">
-        <dc:Bounds x="942" y="-348" width="36" height="36"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_System2Receive_di" bpmnElement="Task_System2Receive">
-        <dc:Bounds x="1010" y="-370" width="100" height="80"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_System2Display_di" bpmnElement="Task_System2Display">
-        <dc:Bounds x="1140" y="-370" width="100" height="80"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_System2Close_di" bpmnElement="Event_System2Close">
-        <dc:Bounds x="1262" y="-338" width="36" height="36"/>
-      </bpmndi:BPMNShape>
+      <!-- Sequence Flow: ТП -->
+      <bpmndi:BPMNEdge id="Flow_TS_1_di" bpmnElement="Flow_TS_1">
+        <di:waypoint x="266" y="210"/>
+        <di:waypoint x="310" y="210"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TS_2_di" bpmnElement="Flow_TS_2">
+        <di:waypoint x="450" y="210"/>
+        <di:waypoint x="490" y="210"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TS_3_di" bpmnElement="Flow_TS_3">
+        <di:waypoint x="640" y="210"/>
+        <di:waypoint x="690" y="210"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TS_4_di" bpmnElement="Flow_TS_4">
+        <di:waypoint x="726" y="210"/>
+        <di:waypoint x="770" y="210"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TS_5_di" bpmnElement="Flow_TS_5">
+        <di:waypoint x="890" y="210"/>
+        <di:waypoint x="930" y="210"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TS_6_di" bpmnElement="Flow_TS_6">
+        <di:waypoint x="955" y="210"/>
+        <di:waypoint x="1020" y="210"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TS_7_di" bpmnElement="Flow_TS_7">
+        <di:waypoint x="955" y="235"/>
+        <di:waypoint x="955" y="250"/>
+        <di:waypoint x="1020" y="250"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TS_8_di" bpmnElement="Flow_TS_8">
+        <di:waypoint x="1160" y="170"/>
+        <di:waypoint x="1200" y="170"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TS_9_di" bpmnElement="Flow_TS_9">
+        <di:waypoint x="1160" y="250"/>
+        <di:waypoint x="1200" y="250"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TS_10_di" bpmnElement="Flow_TS_10">
+        <di:waypoint x="1250" y="210"/>
+        <di:waypoint x="1290" y="210"/>
+      </bpmndi:BPMNEdge>
 
-      <bpmndi:BPMNShape id="Event_System3Start_di" bpmnElement="Event_System3Start">
-        <dc:Bounds x="942" y="-88" width="36" height="36"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_System3Check_di" bpmnElement="Task_System3Check">
-        <dc:Bounds x="1010" y="-110" width="100" height="80"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_System3Receive_di" bpmnElement="Task_System3Receive">
-        <dc:Bounds x="1140" y="-110" width="100" height="80"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_System3End_di" bpmnElement="Event_System3End">
-        <dc:Bounds x="1262" y="-78" width="36" height="36"/>
-      </bpmndi:BPMNShape>
+      <!-- Sequence Flow: Снабжение -->
+      <bpmndi:BPMNEdge id="Flow_Sup_1_di" bpmnElement="Flow_Sup_1">
+        <di:waypoint x="266" y="-30"/>
+        <di:waypoint x="310" y="-30"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sup_2_di" bpmnElement="Flow_Sup_2">
+        <di:waypoint x="470" y="-30"/>
+        <di:waypoint x="520" y="-30"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sup_Yes_di" bpmnElement="Flow_Sup_Yes">
+        <di:waypoint x="545" y="-55"/>
+        <di:waypoint x="545" y="-75"/>
+        <di:waypoint x="620" y="-75"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sup_No_di" bpmnElement="Flow_Sup_No">
+        <di:waypoint x="545" y="-5"/>
+        <di:waypoint x="545" y="35"/>
+        <di:waypoint x="620" y="35"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sup_3_di" bpmnElement="Flow_Sup_3">
+        <di:waypoint x="740" y="-75"/>
+        <di:waypoint x="780" y="-75"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sup_EndYes_di" bpmnElement="Flow_Sup_EndYes">
+        <di:waypoint x="920" y="-75"/>
+        <di:waypoint x="960" y="-72"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sup_4_di" bpmnElement="Flow_Sup_4">
+        <di:waypoint x="780" y="35"/>
+        <di:waypoint x="820" y="35"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sup_5_di" bpmnElement="Flow_Sup_5">
+        <di:waypoint x="940" y="35"/>
+        <di:waypoint x="980" y="40"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sup_6_di" bpmnElement="Flow_Sup_6">
+        <di:waypoint x="1016" y="40"/>
+        <di:waypoint x="1050" y="35"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sup_7_di" bpmnElement="Flow_Sup_7">
+        <di:waypoint x="1170" y="35"/>
+        <di:waypoint x="1210" y="35"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sup_EndNo_di" bpmnElement="Flow_Sup_EndNo">
+        <di:waypoint x="1350" y="35"/>
+        <di:waypoint x="1390" y="40"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Sequence Flow: Логистика -->
+      <bpmndi:BPMNEdge id="Flow_Log_1_di" bpmnElement="Flow_Log_1">
+        <di:waypoint x="266" y="-330"/>
+        <di:waypoint x="310" y="-330"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Log_2_di" bpmnElement="Flow_Log_2">
+        <di:waypoint x="450" y="-330"/>
+        <di:waypoint x="490" y="-330"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Sequence Flow: Поставщик -->
+      <bpmndi:BPMNEdge id="Flow_Suppl_1_di" bpmnElement="Flow_Suppl_1">
+        <di:waypoint x="266" y="-510"/>
+        <di:waypoint x="310" y="-510"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Suppl_2_di" bpmnElement="Flow_Suppl_2">
+        <di:waypoint x="450" y="-510"/>
+        <di:waypoint x="490" y="-510"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Message Flow -->
+      <bpmndi:BPMNEdge id="MF_UserToTS_di" bpmnElement="MF_UserToTS" sourceElement="Task_UserMakeRequest_di" targetElement="Event_TSReceiveRequest_di">
+        <di:waypoint x="370" y="390"/>
+        <di:waypoint x="370" y="228"/>
+        <di:waypoint x="248" y="228"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="MF_TS_GetNumber_di" bpmnElement="MF_TS_GetNumber" sourceElement="Task_CreateTicket_di" targetElement="Task_UserGetNumber_di">
+        <di:waypoint x="380" y="250"/>
+        <di:waypoint x="380" y="380"/>
+        <di:waypoint x="530" y="380"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="MF_TS_ToSupply_di" bpmnElement="MF_TS_ToSupply" sourceElement="Task_CreateRequestSupply_di" targetElement="Event_SupplyReceiveRequest_di">
+        <di:waypoint x="565" y="170"/>
+        <di:waypoint x="565" y="-30"/>
+        <di:waypoint x="248" y="-30"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="MF_Supply_Logistics_di" bpmnElement="MF_Supply_Logistics" sourceElement="Task_CallLogistics_di" targetElement="Event_LogisticsReceive_di">
+        <di:waypoint x="680" y="-100"/>
+        <di:waypoint x="680" y="-330"/>
+        <di:waypoint x="248" y="-330"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="MF_Supply_Order_di" bpmnElement="MF_Supply_Order" sourceElement="Task_MakePurchaseRequest_di" targetElement="Event_SupplierReceiveOrder_di">
+        <di:waypoint x="700" y="10"/>
+        <di:waypoint x="700" y="-510"/>
+        <di:waypoint x="248" y="-510"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="MF_Supplier_Deliver_di" bpmnElement="MF_Supplier_Deliver" sourceElement="Task_DeliverEquipment_di" targetElement="Event_SupplyReceiveEquipment_di">
+        <di:waypoint x="380" y="-550"/>
+        <di:waypoint x="380" y="-470"/>
+        <di:waypoint x="998" y="-470"/>
+        <di:waypoint x="998" y="40"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="MF_Logistics_ToTS_di" bpmnElement="MF_Logistics_ToTS" sourceElement="Task_SendToTechSupport_log_di" targetElement="Event_TechSupportReceiveEquipment_di">
+        <di:waypoint x="380" y="-370"/>
+        <di:waypoint x="380" y="100"/>
+        <di:waypoint x="708" y="100"/>
+        <di:waypoint x="708" y="210"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="MF_TS_GiveUser_di" bpmnElement="MF_TS_GiveUser" sourceElement="Task_GiveEquipment_di" targetElement="Event_UserReceiveEquipment_di">
+        <di:waypoint x="830" y="250"/>
+        <di:waypoint x="830" y="380"/>
+        <di:waypoint x="648" y="380"/>
+        <di:waypoint x="648" y="430"/>
+      </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-
 </definitions>
